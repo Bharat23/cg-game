@@ -1,0 +1,14 @@
+{
+  "name": "cg-game",
+  "version": "1.0.0",
+  "main": "index.js",
+  "repository": "git@github.com:Bharat23/cg-game.git",
+  "author": "Bharat Sinha <bharat.sinha.2307@gmail.com>",
+  "license": "MIT",
+  "dependencies": {
+    "http-server": "^0.12.0"
+  },
+  "scripts": {
+    "start": "http-server ./src -p 3000"
+  }
+}
