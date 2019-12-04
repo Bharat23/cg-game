@@ -1,6 +1,7 @@
 // globals
 let platforms;
 let player;
+let enemy;
 let cursors;
 let score = 0;
 let scoreText;
@@ -9,6 +10,7 @@ var fireRate = 100;
 var nextFire = 0;
 let isFired = false;
 let lastDirection = 'down';
+const bulletVelocity = 300;
 let scoreBoardTemplate = (score = 0) => `Score: ${score}`;
 
 const WINDOW_WIDTH = 800;
@@ -41,10 +43,12 @@ function preload () {
     this.load.image('snow', 'static/assets/snow-back.jpg');
     this.load.image('snowtrees', 'static/assets/snowtrees.png');
     // load the bullet
-    this.load.image('donut', 'static/assets/donut.png');
+    this.load.image('snowball', 'static/assets/snowball.png');
 
     // load sprites
-    this.load.spritesheet('homer', 'static/assets/walker.png', { frameWidth: 65, frameHeight: 63 });
+    this.load.spritesheet('walker', 'static/assets/walker.png', { frameWidth: 65, frameHeight: 63 });
+    this.load.spritesheet('walkerShooting', 'static/assets/walker_shooting.png', { frameWidth: 65, frameHeight: 63 });
+    this.load.spritesheet('enemy', 'static/assets/ogre.png', { frameWidth: 65, frameHeight: 64 });
 }
 
 function create () {
@@ -58,41 +62,77 @@ function create () {
     generateTreeBarriers(150, 0, 10, horizontal = false);
 
     // create player
-    player = this.physics.add.sprite(100, 450, 'homer');
+    player = this.physics.add.sprite(100, 450, 'walkerShooting');
     player.setCollideWorldBounds(true);
+
+    // create the enemies
+    enemy = this.physics.add.sprite(300, 400, 'enemy');
+    enemy.setCollideWorldBounds(true);
+    this.anims.create({
+        key: 'enemyanimation',
+        frames: this.anims.generateFrameNumbers('enemy', { start: 25, end: 30 }),
+        frameRate: 5,
+        repeat: -1
+    });
+    enemy.anims.play('enemyanimation');
 
     this.anims.create({
         key: 'left',
-        frames: this.anims.generateFrameNumbers('homer', { start: 9, end: 17 }),
+        frames: this.anims.generateFrameNumbers('walker', { start: 9, end: 17 }),
         frameRate: 10,
         repeat: -1
     });
     
     this.anims.create({
         key: 'turn',
-        frames: [ { key: 'homer', frame: 19 } ],
+        frames: [ { key: 'walker', frame: 19 } ],
         frameRate: 20
     });
     
     this.anims.create({
         key: 'right',
-        frames: this.anims.generateFrameNumbers('homer', { start: 28, end: 32 }),
+        frames: this.anims.generateFrameNumbers('walker', { start: 28, end: 32 }),
         frameRate: 10,
         repeat: -1
     });
 
     this.anims.create({
         key: 'up',
-        frames: this.anims.generateFrameNumbers('homer', { start: 0, end: 8 }),
+        frames: this.anims.generateFrameNumbers('walker', { start: 0, end: 8 }),
         frameRate: 10,
         repeat: -1
     });
 
     this.anims.create({
         key: 'down',
-        frames: this.anims.generateFrameNumbers('homer', { start: 18, end: 26 }),
+        frames: this.anims.generateFrameNumbers('walker', { start: 18, end: 26 }),
         frameRate: 10,
         repeat: -1
+    });
+
+    this.anims.create({
+        key: 'shoot-right',
+        frames: this.anims.generateFrameNumbers('walkerShooting', { start: 37, end: 48 }),
+        frameRate: 50,
+        // repeat: -1
+    });
+    this.anims.create({
+        key: 'shoot-left',
+        frames: this.anims.generateFrameNumbers('walkerShooting', { start: 13, end: 24 }),
+        frameRate: 50,
+        // repeat: -1
+    });
+    this.anims.create({
+        key: 'shoot-up',
+        frames: this.anims.generateFrameNumbers('walkerShooting', { start: 0, end: 12 }),
+        frameRate: 50,
+        // repeat: -1
+    });
+    this.anims.create({
+        key: 'shoot-down',
+        frames: this.anims.generateFrameNumbers('walkerShooting', { start: 25, end: 36 }),
+        frameRate: 50,
+        // repeat: -1
     });
 
     this.physics.add.collider(player, platforms);
@@ -104,25 +144,13 @@ function create () {
 
     // for bullet
     bullets = this.physics.add.group({
-        default: 'donut'
+        defaultKey: 'snowball'
     });
     bullets.enableBody = true;
     bullets.physicsBodyType = Phaser.Physics.ARCADE;
-    bullets.createMultiple(20, 'donut');
+    bullets.createMultiple(20, 'snowball');
     this.physics.add.overlap(bullets, platforms, bulletPlatformCollision, null, this);
-    // bullets.callAll('events.onOutOfBounds.add', 'events.onOutOfBounds', resetLaser);
-	// Same as above, set the anchor of every sprite to 0.5, 1.0
-	// bullets.callAll('anchor.setTo', 'anchor', 0.5, 1.0);
- 
-	// This will set 'checkWorldBounds' to true on all sprites in the group
-	// bullets.setAll('checkWorldBounds', true);
-    // bullets.enableBody = true;
-    // bullets.physicsBodyType = Phaser.Physics.ARCADE;
-
-    // bullets.createMultiple(50, 'bullet');
-    // bullets.setAll('checkWorldBounds', true);
-    // bullets.setAll('outOfBoundsKill', true);
-    // this.input.on('pointerdown', fire, this);
+    this.physics.add.overlap(bullets, enemy, bulletEnemyCollision, null, this);
 }
 
 function update () {
@@ -152,6 +180,7 @@ function update () {
         player.setVelocityX(0);
         player.setVelocityY(0);
         // player.anims.play('turn');
+        console.log('stopped');
         player.anims.stop();
     }
 
@@ -174,21 +203,26 @@ function fire (pointer) {
         bullet.setVisible(true);
         switch (lastDirection) {
             case 'up':
-                    bullet.body.velocity.y = -300;
+                    bullet.body.velocity.y = -bulletVelocity;
+                    player.anims.play('shoot-up', true);
                 break;
             case 'down':
-                    bullet.body.velocity.y = 300;
+                    bullet.body.velocity.y = bulletVelocity;
+                    player.anims.play('shoot-down', true);
                 break;
             case 'right':
-                    bullet.body.velocity.x = 300;
+                    bullet.body.velocity.x = bulletVelocity;
+                    player.anims.play('shoot-right', true);
                 break;
             case 'left':
-                    bullet.body.velocity.x = -300;
+                    bullet.body.velocity.x = -bulletVelocity;
+                    player.anims.play('shoot-left', true);
                 break;
             default:
-                bullet.body.velocity.y = -300;
+                bullet.body.velocity.y = -bulletVelocity;
         }
-        resetFire();
+        // added a settimeout to add delay to the firing
+        setTimeout(() => resetFire(), 500);
     }
 }
 
@@ -203,6 +237,12 @@ function resetFire() {
 
 function bulletPlatformCollision (bullet, platform) {
     bullet.destroy();
+}
+
+function bulletEnemyCollision (bullet, enemy) {
+    bullet.destroy();
+    enemy.destroy();
+    updateScore(10);
 }
 
 function generateTreeBarriers (x, y, length = 1, horizontal = true) {
