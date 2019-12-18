@@ -6,7 +6,8 @@
   "author": "Bharat Sinha <bharat.sinha.2307@gmail.com>",
   "license": "MIT",
   "dependencies": {
-    "http-server": "^0.12.0"
+    "http-server": "^0.12.0",
+    "phaser3-plugin-isometric": "^0.0.7"
   },
   "scripts": {
     "start": "http-server ./src -p 3000"
