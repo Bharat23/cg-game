@@ -1,9 +1,11 @@
 // globals
 let platforms;
 let player;
-let enemy;
+let enemies;
+let enemiesCount = 5;
 let cursors;
 let score = 0;
+let scoreIncreament = 10;
 let scoreText;
 let bullets;
 var fireRate = 100;
@@ -20,7 +22,7 @@ let config = {
     type: Phaser.AUTO,
     width: WINDOW_WIDTH,
     height: WINDOW_HEIGHT,
-    backgroundColor: '#59fd42',
+    backgroundColor: '#6c6ec0',
     physics: {
         default: 'arcade',
         arcade: {
@@ -31,7 +33,10 @@ let config = {
         preload: preload,
         create: create,
         update: update
-    }
+    },
+    autoCenter: true,
+    autoFocus: true,
+    gameTitle: "Berzerk on Ice"
 };
 
 // initialize the game here
@@ -66,15 +71,17 @@ function create () {
     player.setCollideWorldBounds(true);
 
     // create the enemies
-    enemy = this.physics.add.sprite(300, 400, 'enemy');
-    enemy.setCollideWorldBounds(true);
+    enemies = generateEnemies.call(this, enemiesCount);    
+    // enemy = this.physics.add.sprite(300, 400, 'enemy');
+    // enemy.setCollideWorldBounds(true);
+
     this.anims.create({
         key: 'enemyanimation',
         frames: this.anims.generateFrameNumbers('enemy', { start: 25, end: 30 }),
         frameRate: 5,
         repeat: -1
     });
-    enemy.anims.play('enemyanimation');
+    enemies = enemies.map(enemy => enemy.anims.play('enemyanimation'));
 
     this.anims.create({
         key: 'left',
@@ -150,38 +157,42 @@ function create () {
     bullets.physicsBodyType = Phaser.Physics.ARCADE;
     bullets.createMultiple(20, 'snowball');
     this.physics.add.overlap(bullets, platforms, bulletPlatformCollision, null, this);
-    this.physics.add.overlap(bullets, enemy, bulletEnemyCollision, null, this);
+    for (let i=0; i<enemiesCount; i++) {
+        this.physics.add.overlap(bullets, enemies[i], bulletEnemyCollision, null, this);
+        this.physics.add.overlap(player, enemies[i], playerEnemyCollision, null, this);
+    }
+    
 }
 
 function update () {
-    if (cursors.left.isDown) {
-        player.setVelocityX(-160);
-        player.anims.play('left', true);
-        lastDirection = 'left';
-    } else if (cursors.right.isDown) {
-        player.setVelocityX(160);
-        player.anims.play('right', true);
-        lastDirection = 'right';
-    } else if (cursors.up.isDown) {
-        player.setVelocityY(-160);
-        player.anims.play('up', true);
-        lastDirection = 'up';
-    } else if (cursors.down.isDown) {
-        player.anims.play('down', true);
-        player.setVelocityY(160);
-        lastDirection = 'down';
-    } else if (cursors.space.isDown) {
-        // shoot
-        if (!isFired) {
-            fire(player.getCenter());
+    if (player.active) {
+        if (cursors.left.isDown) {
+            player.setVelocityX(-160);
+            player.anims.play('left', true);
+            lastDirection = 'left';
+        } else if (cursors.right.isDown) {
+            player.setVelocityX(160);
+            player.anims.play('right', true);
+            lastDirection = 'right';
+        } else if (cursors.up.isDown) {
+            player.setVelocityY(-160);
+            player.anims.play('up', true);
+            lastDirection = 'up';
+        } else if (cursors.down.isDown) {
+            player.anims.play('down', true);
+            player.setVelocityY(160);
+            lastDirection = 'down';
+        } else if (cursors.space.isDown) {
+            // shoot
+            if (!isFired) {
+                fire(player.getCenter());
+            }
+                
+        } else {
+            player.setVelocityX(0);
+            player.setVelocityY(0);
+            player.anims.stop();
         }
-            
-    } else {
-        player.setVelocityX(0);
-        player.setVelocityY(0);
-        // player.anims.play('turn');
-        console.log('stopped');
-        player.anims.stop();
     }
 
     if (cursors.up.isDown && player.body.touching.down) {
@@ -190,13 +201,13 @@ function update () {
 }
 
 // function to update the text score
-function updateScore (score) {
+function updateScore () {
+    score += scoreIncreament;
     scoreText.setText(scoreBoardTemplate(score));
 }
 
 function fire (pointer) {
     isFired = true;
-    console.log('here');
     var bullet = bullets.get(pointer.x, pointer.y);
     if (bullet) {
         bullet.setActive(true);
@@ -242,7 +253,12 @@ function bulletPlatformCollision (bullet, platform) {
 function bulletEnemyCollision (bullet, enemy) {
     bullet.destroy();
     enemy.destroy();
-    updateScore(10);
+    updateScore();
+}
+
+function playerEnemyCollision(player, enemy) {
+    player.destroy();
+    // updateScore();
 }
 
 function generateTreeBarriers (x, y, length = 1, horizontal = true) {
@@ -257,4 +273,15 @@ function generateTreeBarriers (x, y, length = 1, horizontal = true) {
     } else {
         generateTreeBarriers(x, y + treeGaps[selectedGap], length - 1, horizontal);
     }
+}
+
+function generateEnemies(count = 1) {
+    let enemies = [];
+    for (let i=0; i<count; i++) {
+        let enemyX = Math.round(Math.random()*(WINDOW_WIDTH-10));
+        let enemyY = Math.round(Math.random()*(WINDOW_HEIGHT-10));
+        enemies[i] = this.physics.add.sprite(enemyX, enemyY, 'walkerShooting');
+        enemies[i].setCollideWorldBounds(true);
+    }
+    return enemies;
 }
