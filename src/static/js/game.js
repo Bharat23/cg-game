@@ -193,10 +193,10 @@ function update () {
             player.setVelocityY(0);
             player.anims.stop();
         }
-    }
-
-    if (cursors.up.isDown && player.body.touching.down) {
-        player.setVelocityY(-330);
+        
+        if (cursors.up.isDown && player.body.touching.down) {
+            player.setVelocityY(-330);
+        }
     }
 }
 
