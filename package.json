@@ -9,6 +9,7 @@
     "http-server": "^0.12.0"
   },
   "scripts": {
-    "start": "http-server ./src -p 3000"
+    "start": "http-server ./src -p 3000",
+    "deploy:copy": "cp -rf src/ ."
   }
 }
